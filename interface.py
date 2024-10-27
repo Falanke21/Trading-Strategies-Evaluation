@@ -21,10 +21,14 @@ class MarketDecision():
 
 class IStrategy(metaclass=abc.ABCMeta):
     @abc.abstractmethod
-    def swing_trade(self, symbol='AAPL') -> MarketDecision:
+    def generate_signal(self, symbol='AAPL', date=None, position=0, cash=0.0) -> MarketDecision:
         """
-        Swing trade a stock based on a strategy
+        Generate a trading signal for a stock based on a strategy
         :param symbol: Stock ticker symbol
+        :param date: Date for the signal generation
+        :param position: Current number of shares held
+        :param cash: Available cash for trading
         :return: Decision to buy or sell or hold the stock
         """
         raise NotImplementedError
+

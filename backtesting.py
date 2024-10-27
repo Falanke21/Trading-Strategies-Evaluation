@@ -2,18 +2,18 @@ import pandas as pd
 from datetime import datetime, timedelta
 import matplotlib.pyplot as plt
 from macd import MACDStrategy
-from interface import MarketAction
+from kdj import KDJStrategy
+from enhanced_macd import EnhancedMACDStrategy
+from interface import IStrategy, MarketAction  # Updated import
 import config  # Import the config file
 from tqdm import tqdm  # Import tqdm for progress bar
 
+STRATEGY = EnhancedMACDStrategy
 SYMBOL = 'AAPL'
 
-def backtest_macd_strategy():
-    # Initialize the MACD strategy
-    macd_strategy = MACDStrategy(api_key=config.API_KEY, api_secret=config.SECRET_KEY)
-    
-    # Define the date range for backtesting (last 365 days)
-    end_date = datetime.now() - timedelta(minutes=15)  # Exclude the last 15 minutes
+def backtest_strategy(strategy: IStrategy):
+    # Set the date range for backtesting (last 365 days, ending a week before today)
+    end_date = datetime.now() - timedelta(days=7)
     start_date = end_date - timedelta(days=365)
     
     # Initialize portfolio value and cash
@@ -27,13 +27,13 @@ def backtest_macd_strategy():
     stock_prices = []
     
     # Initialize progress bar
-    pbar = tqdm(pd.date_range(start=start_date, end=end_date), desc="Backtesting Progress", dynamic_ncols=True)
+    pbar = tqdm(pd.date_range(start=start_date, end=end_date), desc=f"Backtesting {STRATEGY.__name__} Progress", dynamic_ncols=True)
     
     # Simulate trading
     for single_date in pbar:
         try:
-            # Use the swing_trade method to get the trading decision for the current date
-            decision = macd_strategy.swing_trade(SYMBOL, end_date=single_date)
+            # Use the generate_signal method to get the trading decision for the current date
+            decision = strategy.generate_signal(SYMBOL, date=single_date, position=position, cash=cash)
             
             if decision.action == MarketAction.BUY and cash >= decision.price * decision.quantity:
                 cash -= decision.price * decision.quantity
@@ -66,28 +66,45 @@ def backtest_macd_strategy():
         'Stock Price': stock_prices
     })
     
+    # Normalize both series to start at 100%
+    initial_portfolio = portfolio_df['Portfolio Value'].iloc[0]
+    initial_stock = portfolio_df['Stock Price'].iloc[0]
+    
+    portfolio_df['Portfolio Value %'] = (portfolio_df['Portfolio Value'] / initial_portfolio) * 100
+    portfolio_df['Stock Price %'] = (portfolio_df['Stock Price'] / initial_stock) * 100
+    
     # Plotting the results
     fig, ax1 = plt.subplots(figsize=(10, 6))
 
-    # Plot portfolio value on the primary y-axis
-    ax1.plot(portfolio_df['Date'], portfolio_df['Portfolio Value'], label='Portfolio Value', color='blue')
+    # Plot both normalized series on the same axis
+    ax1.plot(portfolio_df['Date'], portfolio_df['Portfolio Value %'], 
+             label='Portfolio Value', color='blue')
+    ax1.plot(portfolio_df['Date'], portfolio_df['Stock Price %'], 
+             label=f'{SYMBOL} Stock Price', color='orange')
+    
     ax1.set_xlabel('Date')
-    ax1.set_ylabel('Portfolio Value ($)', color='blue')
-    ax1.tick_params(axis='y', labelcolor='blue')
-
-    # Create a secondary y-axis for the stock price
-    ax2 = ax1.twinx()
-    ax2.plot(portfolio_df['Date'], portfolio_df['Stock Price'], label=f'{SYMBOL} Stock Price', color='orange')
-    ax2.set_ylabel(f'{SYMBOL} Stock Price ($)', color='orange')
-    ax2.tick_params(axis='y', labelcolor='orange')
-
+    ax1.set_ylabel('Value (% of initial)')
+    
     # Add title and legend
-    plt.title(f"Portfolio Value and {SYMBOL} Stock Price Over Time")
-    fig.tight_layout()
-    fig.legend(loc='upper left', bbox_to_anchor=(0.1, 0.9))
-
+    plt.title(f"{STRATEGY.__name__} Strategy: Portfolio Value and {SYMBOL} Stock Price Performance (%)")
+    plt.legend(loc='upper left')
+    
     # Save and show the plot
-    plt.savefig('portfolio_value_macd.png')
+    plt.savefig(f'portfolio_value_{STRATEGY.__name__}.png')
+    print(f"Plot saved as portfolio_value_{STRATEGY.__name__}.png")
 
 if __name__ == '__main__':
-    backtest_macd_strategy()
+    # Initialize the strategy
+    if STRATEGY == MACDStrategy:
+        strategy = MACDStrategy(api_key=config.API_KEY, api_secret=config.SECRET_KEY)
+        print("Backtesting MACD strategy")
+    elif STRATEGY == KDJStrategy:
+        strategy = KDJStrategy(api_key=config.API_KEY, api_secret=config.SECRET_KEY)
+        print("Backtesting KDJ strategy")
+    elif STRATEGY == EnhancedMACDStrategy:
+        strategy = EnhancedMACDStrategy(api_key=config.API_KEY, api_secret=config.SECRET_KEY)
+        print("Backtesting EnhancedMACD strategy")
+    else:
+        raise ValueError(f"Unsupported strategy: {STRATEGY}")
+    
+    backtest_strategy(strategy)
