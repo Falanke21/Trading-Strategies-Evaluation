@@ -25,7 +25,9 @@ class IStrategy(metaclass=abc.ABCMeta):
         """
         Generate a trading signal for a stock based on a strategy
         :param symbol: Stock ticker symbol
-        :param date: Date for the signal generation
+        :param date: Date for the signal generation. The default is the current date.
+        The strategy is able to look back any historical data before the date to 
+        generate the signal.
         :param position: Current number of shares held
         :param cash: Available cash for trading
         :return: Decision to buy or sell or hold the stock
