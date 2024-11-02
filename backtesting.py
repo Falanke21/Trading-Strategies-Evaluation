@@ -104,6 +104,30 @@ def calculate_alpha(strategy_returns, market_returns, risk_free_rate=0.02):
     alpha = strategy_return - (daily_rf * 252 + beta * (market_return - daily_rf * 252))
     return alpha
 
+def calculate_win_rate(returns):
+    """
+    Calculate the win rate (percentage of profitable trades)
+    Args:
+        returns: pandas Series of returns
+    Returns:
+        win_rate: Percentage of winning trades
+    """
+    wins = (returns > 0).sum()
+    total = len(returns)
+    return wins / total if total > 0 else 0.0
+
+def calculate_profit_factor(returns):
+    """
+    Calculate the profit factor (gross profits / gross losses)
+    Args:
+        returns: pandas Series of returns
+    Returns:
+        profit_factor: Ratio of gross profits to gross losses
+    """
+    gains = returns[returns > 0].sum()
+    losses = abs(returns[returns < 0].sum())
+    return gains / losses if losses != 0 else float('inf')
+
 def plot_backtest_results(portfolio_df, strategy_name, symbol):
     """
     Plot the backtest results comparing portfolio value to stock price performance
@@ -225,18 +249,47 @@ def backtest_strategy(strategy: IStrategy):
         returns_series = returns_series[:min_length]
         market_returns_series = market_returns_series[:min_length]
     
+    # Calculate all metrics
     sharpe_ratio = calculate_sharpe_ratio(returns_series)
     max_dd, max_dd_duration = calculate_max_drawdown(portfolio_values)
     beta = calculate_beta(returns_series, market_returns_series)
     alpha = calculate_alpha(returns_series, market_returns_series)
+    win_rate = calculate_win_rate(returns_series)
+    profit_factor = calculate_profit_factor(returns_series)
     
-    # Print metrics
+    # Print metrics with interpretations
     print(f"\nPerformance Metrics:")
     print(f"Sharpe Ratio: {sharpe_ratio:.2f}")
-    print(f"Maximum Drawdown: {max_dd:.2%}")
+    print("    > 1.0: Good | > 2.0: Very Good | > 3.0: Excellent")
+    print("    Measures risk-adjusted returns. Higher is better.")
+    
+    print(f"\nMaximum Drawdown: {max_dd:.2%}")
     print(f"Maximum Drawdown Duration: {max_dd_duration} days")
-    print(f"Beta: {beta:.2f}")
-    print(f"Alpha: {alpha:.2%}")
+    print("    Shows worst peak-to-trough decline in portfolio value")
+    print(f"    Example: {max_dd:.2%} means a ${initial_cash:,.2f} portfolio")
+    print(f"    would have dropped to ${initial_cash * (1-max_dd):,.2f} at its lowest point")
+    print("    Shorter drawdown durations and smaller drawdowns are better")
+    print("    Useful for understanding worst-case scenarios and risk tolerance")
+    
+    print(f"\nBeta: {beta:.2f}")
+    print("    1.0: Moves with market")
+    print("    > 1.0: More volatile than market")
+    print("    < 1.0: Less volatile than market")
+    
+    print(f"\nAlpha: {alpha:.2%}")
+    print("    > 0: Outperforming the market")
+    print("    = 0: Matching the market")
+    print("    < 0: Underperforming the market")
+    
+    print(f"\nWin Rate: {win_rate:.2%}")
+    print("    > 50%: More winning trades than losing trades")
+    print("    Note: Should be considered alongside profit factor")
+    
+    print(f"\nProfit Factor: {profit_factor:.2f}")
+    print("    > 1.0: Profitable")
+    print("    > 2.0: Good")
+    print("    > 3.0: Excellent")
+    print("    Shows how much profit per unit of risk")
     
     # Plot the results using the helper function
     plot_backtest_results(portfolio_df, STRATEGY.__name__, SYMBOL)
