@@ -1,9 +1,9 @@
 import pandas as pd
 from datetime import datetime, timedelta
 import matplotlib.pyplot as plt
-from macd import MACDStrategy
-from kdj import KDJStrategy
-from enhanced_macd import EnhancedMACDStrategy
+from strategy.macd import MACDStrategy
+from strategy.kdj import KDJStrategy
+from strategy.enhanced_macd import EnhancedMACDStrategy
 from interface import IStrategy, MarketAction  # Updated import
 import config  # Import the config file
 from tqdm import tqdm  # Import tqdm for progress bar
