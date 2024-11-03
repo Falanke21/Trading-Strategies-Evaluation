@@ -10,7 +10,7 @@ from interface import MarketAction, MarketDecision, IStrategy
 class MACDStrategy(IStrategy):
     def __init__(self, api_key: str, api_secret: str, 
                  lookback_days: int = 180,
-                 trade_quantity: int = 100,  # Fixed quantity to trade
+                 trade_quantity: int = 300,  # Fixed quantity to trade
                  macd_fast: int = 12,
                  macd_slow: int = 26,
                  macd_signal: int = 9):

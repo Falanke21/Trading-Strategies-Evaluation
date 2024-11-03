@@ -10,9 +10,9 @@ from interface import MarketAction, MarketDecision, IStrategy
 class SMAStrategy(IStrategy):
     def __init__(self, api_key: str, api_secret: str,
                  lookback_days: int = 180,
-                 trade_quantity: int = 100,
-                 short_window: int = 20,
-                 long_window: int = 50):
+                 trade_quantity: int = 300,
+                 short_window: int = 5,
+                 long_window: int = 20):
         """
         Simple Moving Average (SMA) Crossover Strategy
         
