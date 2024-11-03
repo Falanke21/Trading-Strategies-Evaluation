@@ -11,6 +11,7 @@ from interface import IStrategy, MarketAction  # Updated import
 import config  # Import the config file
 from tqdm import tqdm  # Import tqdm for progress bar
 import numpy as np
+import os
 
 STRATEGY = KDJStrategy
 SYMBOL = 'AAPL'
@@ -147,9 +148,10 @@ def plot_backtest_results(portfolio_df, strategy_name, symbol):
     plt.title(f"{strategy_name} Strategy: Portfolio Value and {symbol} Stock Price Performance (%)")
     plt.legend(loc='upper left')
     
-    # Save and show the plot
-    plt.savefig(f'portfolio_value_{strategy_name}.png')
-    print(f"Plot saved as portfolio_value_{strategy_name}.png")
+    # Save the plot to the results directory
+    plot_path = f'result_backtest/plots/portfolio_value_{strategy_name}.png'
+    plt.savefig(plot_path)
+    print(f"Plot saved as {plot_path}")
 
 def backtest_strategy(strategy: IStrategy):
     # Set the date range for backtesting (last 365 days, ending a week before today)
@@ -257,44 +259,65 @@ def backtest_strategy(strategy: IStrategy):
     win_rate = calculate_win_rate(returns_series)
     profit_factor = calculate_profit_factor(returns_series)
     
-    # Print metrics with interpretations
-    print(f"\nPerformance Metrics:")
-    print(f"Sharpe Ratio: {sharpe_ratio:.2f}")
-    print("    > 1.0: Good | > 2.0: Very Good | > 3.0: Excellent")
-    print("    Measures risk-adjusted returns. Higher is better.")
+    # Create metrics text
+    metrics_text = f"""Performance Metrics for {STRATEGY.__name__}:
+
+Sharpe Ratio: {sharpe_ratio:.2f}
+    > 1.0: Good | > 2.0: Very Good | > 3.0: Excellent
+    Measures risk-adjusted returns. Higher is better.
+
+Maximum Drawdown: {max_dd:.2%}
+Maximum Drawdown Duration: {max_dd_duration} days
+    Shows worst peak-to-trough decline in portfolio value
+    Example: {max_dd:.2%} means a ${initial_cash:,.2f} portfolio
+    would have dropped to ${initial_cash * (1-max_dd):,.2f} at its lowest point
+    Shorter drawdown durations and smaller drawdowns are better
+    Useful for understanding worst-case scenarios and risk tolerance
+
+Beta: {beta:.2f}
+    1.0: Moves with market
+    > 1.0: More volatile than market
+    < 1.0: Less volatile than market
+
+Alpha: {alpha:.2%}
+    > 0: Outperforming the market
+    = 0: Matching the market
+    < 0: Underperforming the market
+
+Win Rate: {win_rate:.2%}
+    > 50%: More winning trades than losing trades
+    Note: Should be considered alongside profit factor
+
+Profit Factor: {profit_factor:.2f}
+    > 1.0: Profitable
+    > 2.0: Good
+    > 3.0: Excellent
+    Shows how much profit per unit of risk
+"""
     
-    print(f"\nMaximum Drawdown: {max_dd:.2%}")
-    print(f"Maximum Drawdown Duration: {max_dd_duration} days")
-    print("    Shows worst peak-to-trough decline in portfolio value")
-    print(f"    Example: {max_dd:.2%} means a ${initial_cash:,.2f} portfolio")
-    print(f"    would have dropped to ${initial_cash * (1-max_dd):,.2f} at its lowest point")
-    print("    Shorter drawdown durations and smaller drawdowns are better")
-    print("    Useful for understanding worst-case scenarios and risk tolerance")
-    
-    print(f"\nBeta: {beta:.2f}")
-    print("    1.0: Moves with market")
-    print("    > 1.0: More volatile than market")
-    print("    < 1.0: Less volatile than market")
-    
-    print(f"\nAlpha: {alpha:.2%}")
-    print("    > 0: Outperforming the market")
-    print("    = 0: Matching the market")
-    print("    < 0: Underperforming the market")
-    
-    print(f"\nWin Rate: {win_rate:.2%}")
-    print("    > 50%: More winning trades than losing trades")
-    print("    Note: Should be considered alongside profit factor")
-    
-    print(f"\nProfit Factor: {profit_factor:.2f}")
-    print("    > 1.0: Profitable")
-    print("    > 2.0: Good")
-    print("    > 3.0: Excellent")
-    print("    Shows how much profit per unit of risk")
+    # Print metrics to console and save to file
+    print(metrics_text)
+    save_metrics_to_file(metrics_text, STRATEGY.__name__)
     
     # Plot the results using the helper function
     plot_backtest_results(portfolio_df, STRATEGY.__name__, SYMBOL)
 
+def ensure_directories():
+    """Create necessary directories if they don't exist"""
+    os.makedirs("result_backtest/plots", exist_ok=True)
+    os.makedirs("result_backtest/metrics", exist_ok=True)
+
+def save_metrics_to_file(metrics_text: str, strategy_name: str):
+    """Save metrics to a text file"""
+    filename = f"result_backtest/metrics/{strategy_name}_metrics.txt"
+    with open(filename, 'w') as f:
+        f.write(metrics_text)
+    print(f"Metrics saved to {filename}")
+
 if __name__ == '__main__':
+    # Create necessary directories
+    ensure_directories()
+    
     # Initialize the strategy
     if STRATEGY == BuyAndHoldStrategy:
         strategy = BuyAndHoldStrategy(api_key=config.API_KEY, api_secret=config.SECRET_KEY)
